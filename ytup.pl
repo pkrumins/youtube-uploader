@@ -8,6 +8,7 @@
 # Peteris Krumins (peter@catonmat.net)
 # http://www.catonmat.net  --  good coders code, great reuse
 #
+$|=1;
 
 use constant VERSION => "1.3";
 
@@ -15,7 +16,10 @@ use strict;
 use warnings;
 
 use LWP::UserAgent;
+use HTTP::Request::Common qw(POST);
+$HTTP::Request::Common::DYNAMIC_FILE_UPLOAD++;
 use HTML::Entities 'decode_entities';
+
 use Getopt::Std;
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
 
@@ -182,9 +186,9 @@ print "Logging in to YouTube...\n";
 login();
 
 print "Uploading the video ($opts{t})...\n";
-upload();
+my $video_id = upload();
 
-print "Done!\n";
+print "Done! http://www.youtube.com/watch?v=$video_id\n";
 
 sub login {
     # go to login page to get redirected to google sign in page
@@ -243,7 +247,7 @@ sub login {
     # I found that when you have logged in the upper right menu changes
     # and you have access to 'Sign Out' option.
     # We check for this string to see if we have logged in.
-    unless ($res->content =~ />Sign Out</) {
+    unless ($res->content =~ /<form name="logoutForm"/) {
         die "Failed logging in: username/password incorrect";
     }
 }
@@ -304,12 +308,31 @@ EOL
     }
 
     # now lets post the video
-    $resp = $ua->post($file_upload_url, 
+    my $starttime = time();
+    my $size = -s $opts{f};
+    print "\n";
+    my $req = POST($file_upload_url, 
         {
             Filedata => [ $opts{f} ]
         },
         "Content_Type" => "form-data"
     );
+    
+    
+    # wrap content generator sub
+    my $gen = $req->content;
+    die unless ref($gen) eq "CODE";
+    my $total = 0;
+    
+    $req->content(sub {
+    my $chunk = &$gen();
+    $total += length($chunk);
+    print "\r$total / $size bytes (".int($total/$size*100)."%) sent, ".int($total/1000/(time()-$starttime+1)) . " k / sec ";
+    return $chunk;
+    });
+    
+    $resp = $ua->request($req);
+    print "\n";
 
     unless ($resp->is_success) {
         die "Failed uploading the file: ", $resp->status_line;
@@ -345,6 +368,8 @@ EOL
     if ($resp->content =~ /"errors":\s*\[(.+?)\]/) {
         die "The video uploaded OK, but there were errors setting the video info:\n", $1;
     }
+
+    return $video_id;
 }
 
 sub prepare_upload_urls {
