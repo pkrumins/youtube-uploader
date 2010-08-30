@@ -262,12 +262,12 @@ sub upload {
         die "Failed getting $upload_url: ", $resp->status_line;
     }
 
-    my $SI = extract_field($resp->content, qr/"sessionKey": "([^"]+)"/);
+    my $SI = extract_field($resp->content, qr/'sessionKey': '([^']+)'/);
     unless ($SI) {
         die "Failed extracting sessionKey. YouTube might have redesigned!";
     }
 
-    my $UK = extract_field($resp->content, qr/"uploadKey": "([^"]+)"/);
+    my $UK = extract_field($resp->content, qr/'uploadKey': '([^']+)'/);
     unless ($UK) {
         die "Failed extracting uploadKey. YouTube might have redesigned!";
     }
