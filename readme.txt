@@ -53,7 +53,8 @@ couch". You have to use quotes around the description.
 -x is a comma separated of tags. For example -x "cat, peteris, couch, sun".
 Tags also have to be quotes.
 
-Here is the list of possible categories (for -c switch):
+Here is the list of possible categories (for the "-c" switch):
+
     2    - Autos & Vehicles
     23   - Comedy
     27   - Education
